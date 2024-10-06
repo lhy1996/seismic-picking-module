@@ -32,13 +32,11 @@ class PhaseNet(nn.Module):
         self.filters_root = 8
         self.activation = torch.relu
 
-        # 定义输入层
         self.inc = nn.Conv1d(
             self.in_channels, self.filters_root, self.kernel_size, padding=math.floor(self.kernel_size / 2)
         )
         self.in_bn = nn.BatchNorm1d(8, eps=1e-3)
 
-        # 定义下采样分支
         self.down_branch = nn.ModuleList()
         self.up_branch = nn.ModuleList()
 
@@ -55,7 +53,7 @@ class PhaseNet(nn.Module):
                 bn2 = None
             else:
                 if i in [1, 2, 3]:
-                    padding = 0  # 手动填充
+                    padding = 0 
                 else:
                     padding = self.kernel_size // 2
                 conv_down = nn.Conv1d(
@@ -70,7 +68,6 @@ class PhaseNet(nn.Module):
 
             self.down_branch.append(nn.ModuleList([conv_same, bn1, conv_down, bn2]))
 
-        # 定义上采样分支
         for i in range(self.depth - 1):
             filters = int(2 ** (3 - i) * self.filters_root)
             conv_up = nn.ConvTranspose1d(
@@ -85,21 +82,11 @@ class PhaseNet(nn.Module):
 
             self.up_branch.append(nn.ModuleList([conv_up, bn1, conv_same, bn2]))
 
-        # 定义输出层
         self.out = nn.Conv1d(last_filters, self.classes, 1, padding=0)
         self.softmax = torch.nn.Softmax(dim=1)
 
     def forward(self, x, logits=False):
-        """
-        前向传播函数
 
-        参数:
-            x (tensor): 输入张量
-            logits (bool): 是否返回未经过softmax处理的输出，默认为False
-
-        返回:
-            tensor: 经过网络处理后的输出张量
-        """
         x = self.activation(self.in_bn(self.inc(x)))
         #print(x.shape)
 
@@ -170,18 +157,14 @@ class PhaseNet(nn.Module):
         return window
 
     def annotate_window_post(self, pred, piggyback=None, argdict=None):
-        # 将预测结果进行转置以获得正确的形状
         pred = pred.T
-        # 获取预处理中的缺失值参数
         prenan, postnan = argdict.get(
             "blinding", self._annotate_args.get("blinding")[1]
         )
-        # 如果预处理中存在缺失值，则在指定位置将预测结果设置为NaN
         if prenan > 0:
             pred[:prenan] = np.nan
         if postnan > 0:
             pred[-postnan:] = np.nan
-        # 返回处理后的预测结果
         return pred
 
     def classify_aggregate(self, annotations, argdict) -> sbu.ClassifyOutput:
